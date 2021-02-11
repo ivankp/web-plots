@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>Plots</title>
+<style>
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.flex {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.flex > * {
+  display: inline-block;
+}
+.top {
+  vertical-align: top;
+}
+label {
+  user-select: none;
+  font-family: sans-serif;
+}
+
+#menu {
+  margin: 0 25px 0 0;
+}
+
+#plot {
+  margin: 0;
+}
+#plot > figcaption {
+  text-align: center;
+  font-family: sans-serif;
+}
+
+ul.file-tree {
+  font-family: monospace;
+}
+ul.file-tree, ul.file-tree ul {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+ul.file-tree ul {
+  padding-left: 1.2em;
+}
+ul.file-tree li {
+  list-style-type: none;
+}
+ul.file-tree span {
+  cursor: pointer;
+}
+ul.file-tree span:hover {
+  text-decoration: underline;
+}
+ul.file-tree li > .dir::before {
+  content: "\25B6";
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+  transition: transform 0.07s linear;
+}
+ul.file-tree li.exp > .dir::before {
+  transform: rotate(90deg);
+  transition: transform 0.07s linear;
+}
+ul.file-tree li:not(.exp) ul {
+  display: none;
+}
+.file-tree a {
+  color: black;
+}
+</style>
+<script src="d3v6.js"></script>
+<script src="main.js"></script>
+</head>
+<body class="flex">
+
+<div id="menu"></div>
+<figure id="plot"></figure>
+
+</body>
+</html>
