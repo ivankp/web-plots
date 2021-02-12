@@ -15,6 +15,12 @@ function load_plot(path) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const search = window.location.search.match(/(?<=\?)[^&]+/);
+  if (search) {
+    const path = decodeURIComponent(search[0]);
+    window.history.replaceState({ path }, '', '?'+search[0]);
+    load_plot(path);
+  }
   fetch('data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
@@ -34,25 +40,27 @@ document.addEventListener('DOMContentLoaded', () => {
           };
           read_tree(x,make(li,'ul'));
         } else {
-          const path = dirs.join('/')+'.json';
+          const path = dirs.join('/');
           const link = make(li,'a');
           link.textContent = name;
-          link.href = path;
+          link.href = path+'.json';
           link.target = '_blank';
           link.onclick = function(e) {
             e.preventDefault();
-            window.history.pushState(
-              { path }, '', '?'+encodeURIComponent(path));
+            const s = window.history.state;
+            if (!(s && s.path===path))
+              window.history.pushState(
+                { path }, '', '?'+encodeURIComponent(path));
             load_plot(path);
           };
         }
         dirs.pop();
       }
     })(r,ul);
-  }).catch(e => { alert(e.message); });
+  }).catch(e => { alert(e.message); throw e; });
 });
 window.onpopstate = function(e) {
-  load_plot(e.state.path);
+  if (e.state!==null) load_plot(e.state.path);
 };
 
 const dummy_a = document.createElement('a');
