@@ -16,6 +16,35 @@ const margin = { top: 10, right: 20, bottom: 20, left: 30 },
       width  = 500 + margin.left + margin.right,
       height = 400 + margin.bottom + margin.top;
 
+function ypadding([min,max],logy) {
+  if (logy) return [
+    Math.pow(10,1.05*Math.log10(min) - 0.05*Math.log10(max)),
+    Math.pow(10,1.05*Math.log10(max) - 0.05*Math.log10(min))
+  ];
+  else {
+    let both = false;
+    if (min > 0.) {
+      if (min/max < 0.25) {
+        min = 0.;
+        max /= 0.95;
+      } else both = true;
+    } else if (max < 0.) {
+      if (min/max < 0.25) {
+        max = 0.;
+        min /= 0.95;
+      } else both = true;
+    } else if (min==0.) {
+      max /= 0.95;
+    } else if (max==0.) {
+      min /= 0.95;
+    } else both = true;
+    if (both) {
+      return [ 1.05556*min - 0.05556*max, 1.05556*max - 0.05556*min ];
+    }
+  }
+  return [ min, max ];
+}
+
 function make_plot(data) {
   const fig = clear(_id('plot'));
   { const cap = make(fig,'figcaption');
@@ -58,6 +87,7 @@ function make_plot(data) {
     if (ey[0] > b) ey[0] = b;
     if (ey[1] < b) ey[1] = b;
   }
+  ey = ypadding(ey,false);
 
   const axis = axes[0];
 
@@ -65,12 +95,14 @@ function make_plot(data) {
     .domain([axis[0],axis[axis.length-1]])
     .range([margin.left, width - margin.right]);
   const sy = d3.scaleLinear()
-    .domain(ey).nice()
+    .domain(ey)
     .range([height - margin.bottom, margin.top]);
 
   const ax = d3.axisBottom(sx);
   if (axis.length < 11) ax.tickValues(axis);
+  ax.tickSizeOuter(0);
   const ay = d3.axisLeft(sy);
+  ay.tickSizeOuter(0);
 
   const svg = d3.select(fig).append('svg')
     .attrs({ viewBox: [0,0,width,height], width: width, height: height });
@@ -100,7 +132,7 @@ function make_plot(data) {
 }
 
 function load_plot(path) {
-  fetch(root+path+'.json', { method: 'GET' })
+  fetch(root+'data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     console.log(r);
@@ -118,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch(root+'data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
-    const dirs = ['data'];
+    const dirs = [ ];
     const ul = make(_id('menu'),'ul');
     ul.className = 'file-tree';
     (function read_tree(tree,ul) {
@@ -182,7 +214,7 @@ function save_svg(svg) {
     { type:"image/svg+xml;charset=utf-8" }
   ));
   dummy_a.download =
-    decodeURIComponent(window.location.search.match(/(?<=\?)[^&]*/))
+    decodeURIComponent(window.location.search.match(/(?<=\?)[^&]+/))
     .replaceAll('/',' ') + '.svg';
   dummy_a.click();
 }
