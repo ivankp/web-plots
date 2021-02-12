@@ -10,13 +10,47 @@ function clear(x) {
 }
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
 
+function load_plot(path) {
+  console.log(path);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  fetch('data_tree.json', { method: 'GET' });
+  fetch('data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
-    console.log(r);
+    const path = ['data'];
+    const ul = make(_id('menu'),'ul');
+    ul.className = 'file-tree';
+    (function read_tree(tree,ul) {
+      for (const [name,x] of Object.entries(tree)) {
+        dirs.push(name);
+        const li = make(ul,'li');
+        if (typeof x === 'object') {
+          const span = make(li,'span');
+          span.className = 'dir';
+          span.textContent = name;
+          read_tree(x,make(li,'ul'));
+        } else {
+          const path = dirs.join('/')+'.json';
+          const link = make(li,'span');
+          link.textContent = name;
+          link.href = path;
+          link.target = '_blank';
+          link.onclick = function(e) {
+            e.preventDefault();
+            window.history.pushState(
+              { path }, '', '?'+encodeURIComponent(path));
+            load_plot(path);
+          };
+        }
+        dirs.pop();
+      }
+    })(r,ul);
   }).catch(e => { alert(e.message); });
 });
+window.onpopstate = function(e) {
+  load_plot(e.state.path);
+};
 
 const dummy_a = document.createElement('a');
 
