@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch('data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
-    const path = ['data'];
+    const dirs = ['data'];
     const ul = make(_id('menu'),'ul');
     ul.className = 'file-tree';
     (function read_tree(tree,ul) {
@@ -29,10 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
           const span = make(li,'span');
           span.className = 'dir';
           span.textContent = name;
+          span.onclick = function() {
+            this.parentNode.classList.toggle("exp");
+          };
           read_tree(x,make(li,'ul'));
         } else {
           const path = dirs.join('/')+'.json';
-          const link = make(li,'span');
+          const link = make(li,'a');
           link.textContent = name;
           link.href = path;
           link.target = '_blank';
