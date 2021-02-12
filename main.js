@@ -1,3 +1,5 @@
+const root = 'https://test-web-plots.web.cern.ch/test-web-plots/';
+
 const _id = id => document.getElementById(id);
 function make(p,...tags) {
   for (const t of tags)
@@ -10,8 +12,100 @@ function clear(x) {
 }
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
 
+const margin = { top: 10, right: 20, bottom: 20, left: 30 },
+      width  = 500 + margin.left + margin.right,
+      height = 400 + margin.bottom + margin.top;
+
+function make_plot(data) {
+  const fig = clear(_id('plot'));
+  { const cap = make(fig,'figcaption');
+    if (data.title)
+      data.title.split(/\^(\d+)/).forEach((x,i) => {
+        if (i%2) make(cap,'sup').textContent = x;
+        else cap.appendChild(document.createTextNode(x));
+      });
+  }
+  let { axes, bins } = data;
+  let nbins = 1;
+  for (let i=axes.length; i; ) {
+    let n = 0;
+    for (const x of axes[--i]) {
+      if (typeof x === 'number') ++n;
+      else n += x[2]+1;
+    }
+    const edges = new Float32Array(n);
+    let j = 0;
+    for (const x of axes[i]) {
+      if (typeof x === 'number') edges[j++] = x;
+      else {
+        const [ a, b, n ] = x;
+        const d = (b-a)/n;
+        for (let i=0; i<n; ++i)
+          edges[j++] = a + d*i;
+        edges[j++] = b;
+      }
+    }
+    axes[i] = edges.sort();
+    nbins *= edges.length+1;
+  }
+  if (nbins!==bins.length) throw new Error('wrong number of bins');
+
+  if (axes.length>1) throw new Error('multiple axes not yet implemented');
+
+  let ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
+  for (let i=1, n=nbins-1; i<n; ++i) {
+    const b = bins[i];
+    if (ey[0] > b) ey[0] = b;
+    if (ey[1] < b) ey[1] = b;
+  }
+
+  const axis = axes[0];
+
+  const sx = d3.scaleLinear()
+    .domain([axis[0],axis[axis.length-1]])
+    .range([margin.left, width - margin.right]);
+  const sy = d3.scaleLinear()
+    .domain(ey).nice()
+    .range([height - margin.bottom, margin.top]);
+
+  const ax = d3.axisBottom(sx);
+  if (axis.length < 11) ax.tickValues(axis);
+  const ay = d3.axisLeft(sy);
+
+  const svg = d3.select(fig).append('svg')
+    .attrs({ viewBox: [0,0,width,height], width: width, height: height });
+  const svg_node = svg.node();
+
+  { // draw axes
+    const g = svg.append('g')
+    g.append('g').attrs({
+      transform: `translate(0,${height-margin.bottom})`
+    }).call(ax);
+    g.append('g').attrs({
+      transform: `translate(${margin.left},0)`
+    }).call(ay);
+    g.selectAll('line,path').attr('stroke','#000');
+    g.selectAll('text').attr('fill','#000');
+    g.selectAll('*').attr('class',null);
+  }
+
+  { // draw histogram
+    let d = '';
+    for (let i=0, n=axis.length-1; i<n; ++i)
+      d += `M${sx(axis[i])} ${sy(bins[i+1])}H${sx(axis[i+1])}`;
+    svg.append('path').attrs({
+      d, fill: 'none', stroke: '#204A87', 'stroke-width': 2
+    });
+  }
+}
+
 function load_plot(path) {
-  console.log(path);
+  fetch(root+path+'.json', { method: 'GET' })
+  .then(r => r.json())
+  .then(r => {
+    console.log(r);
+    make_plot(r);
+  }).catch(e => { alert(e.message); throw e; });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.history.replaceState({ path }, '', '?'+search[0]);
     load_plot(path);
   }
-  fetch('data_tree.json', { method: 'GET' })
+  fetch(root+'data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     const dirs = ['data'];
