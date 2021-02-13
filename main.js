@@ -163,19 +163,20 @@ function make_plot(data) {
     const cmt = this.getScreenCTM();
     if (e.touches) e = e.touches[0];
     bin = d3.bisectLeft(axis,sx.invert((e.clientX-cmt.e)/cmt.a));
-    if (bin > nbins) bin = nbins;
+    if (bin < 1) bin = 1;
+    else if (bin > nbins) bin = nbins;
     info.textContent =
       `bin ${bin} [${round(axis[bin-1])},${round(axis[bin])}): ${JSON.stringify(bins[bin])}`;
   }
   if (bins[0]) {
     const info = make(fig,'div');
     info.className = 'info';
-    info.textContent = `underflow: ${JSON.stringify(bins[bin])}`;
+    info.textContent = `underflow: ${JSON.stringify(bins[0])}`;
   }
   if (bins[bins.length-1]) {
     const info = make(fig,'div');
     info.className = 'info';
-    info.textContent = `overflow: ${JSON.stringify(bins[bin])}`;
+    info.textContent = `overflow: ${JSON.stringify(bins[bins.length-1])}`;
   }
 }
 
