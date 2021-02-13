@@ -140,19 +140,18 @@ function make_plot(data) {
   }
 
   { // draw histogram
-    const { style } = data;
-    const con = style && style.connected;
+    const { connect, color } = data.style;
 
     let d = '', d2 = '';
     for (let i=0, n=axis.length-1; i<n; ++i) {
       const a = sx(axis[i]), b = sx(axis[i+1]), m = (a+b)/2;
-      d += `${(con&&i)?'L':'M'}${round(a)} ${round(sy(bmid[i]))}H${round(b)}`;
+      d += `${(connect&&i)?'L':'M'}${round(a)} ${round(sy(bmid[i]))}H${round(b)}`;
       if (bmin[i]!==bmid[i] || bmax[i]!==bmid[i])
         d2 += `M${round(m)} ${round(sy(bmin[i]))}V${round(sy(bmax[i]))}`;
     }
     d += d2;
     svg.append('path').attrs({
-      d, fill: 'none', stroke: '#009', 'stroke-width': 2
+      d, fill: 'none', stroke: color||'#009', 'stroke-width': 2
     });
   }
 }
@@ -160,10 +159,8 @@ function make_plot(data) {
 function load_plot(path) {
   fetch(root+'data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
-  .then(r => {
-    console.log(r);
-    make_plot(r);
-  }).catch(e => { alert(e.message); throw e; });
+  .then(make_plot
+  ).catch(e => { alert(e.message); throw e; });
 }
 
 let root = 'https://ivankp.github.io/web-plots/';
