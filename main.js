@@ -1,5 +1,3 @@
-const root = 'https://test-web-plots.web.cern.ch/test-web-plots/';
-
 const _id = id => document.getElementById(id);
 function make(p,...tags) {
   for (const t of tags)
@@ -157,7 +155,7 @@ function make_plot(data) {
 }
 
 function load_plot(path) {
-  fetch(root+'data/'+path+'.json', { method: 'GET' })
+  fetch('data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     console.log(r);
@@ -172,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.history.replaceState({ path }, '', '?'+search[0]);
     load_plot(path);
   }
-  fetch(root+'data_tree.json', { method: 'GET' })
+  fetch('data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     const dirs = [ ];
