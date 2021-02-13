@@ -140,7 +140,8 @@ function make_plot(data) {
   }
 
   { // draw histogram
-    const { connect, color } = data.style;
+    const { style={} } = data;
+    const { connect=false, color='#009' } = style;
 
     let d = '', d2 = '';
     for (let i=0, n=axis.length-1; i<n; ++i) {
@@ -151,7 +152,7 @@ function make_plot(data) {
     }
     d += d2;
     svg.append('path').attrs({
-      d, fill: 'none', stroke: color||'#009', 'stroke-width': 2
+      d, fill: 'none', stroke: color, 'stroke-width': 2
     });
   }
 }
@@ -194,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const path = dirs.join('/');
           const link = make(li,'a');
           link.textContent = name;
-          link.href = path+'.json';
+          link.href = root+'data/'+path+'.json';
           link.target = '_blank';
           link.onclick = function(e) {
             e.preventDefault();
