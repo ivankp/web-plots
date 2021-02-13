@@ -51,6 +51,10 @@ If multiple axes are specified, the bin ordering is as follows:
 where `n` includes under- and overflow.
 That is, bins in subsequent dimensions subdivide bins in the preceding ones.
 
+# Features
+- Press `Ctrl+s` to save the displayed plot in SVG format.
+- Move the mouse over the plot to display bin content.
+
 # Technical notes
 The web script [`main.js`](main.js) is written in JavaScript using the [**d3js** library](https://d3js.org/) v6.
 The histogram data is loaded from the server using the [`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) API
