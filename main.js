@@ -53,32 +53,43 @@ function make_plot(data) {
     });
   }
   let { axes, bins } = data;
+  if (!Array.isArray(axes))
+    throw new Error('"axes" must be an array');
+
   let nbins_total = 1;
-  for (let i=axes.length; i; ) {
-    let n = 0;
-    for (const x of axes[--i]) {
-      if (typeof x === 'number') ++n;
-      else n += x[2]+1;
-    }
-    const edges = new Float32Array(n);
-    let j = 0;
-    for (const x of axes[i]) {
-      if (typeof x === 'number') edges[j++] = x;
-      else {
-        const [ a, b, n ] = x;
-        const d = (b-a)/n;
-        for (let i=0; i<n; ++i)
-          edges[j++] = a + d*i;
-        edges[j++] = b;
+  for (const dim of axes) {
+    if (!Array.isArray(dim))
+      throw new Error('elements of "axes" must be arrays');
+    for (let i=0; i<dim.length; ++i) {
+      const axis = dim[i];
+      if (!Array.isArray(axis))
+        throw new Error('axis definition must be an array');
+      let n = 0;
+      for (const x of axis) {
+        if (typeof x === 'number') ++n;
+        else n += x[2]+1;
       }
+      const edges = new Float32Array(n);
+      let j = 0;
+      for (const x of axis) {
+        if (typeof x === 'number') edges[j++] = x;
+        else {
+          const [ a, b, n ] = x;
+          const d = (b-a)/n;
+          for (let i=0; i<n; ++i)
+            edges[j++] = a + d*i;
+          edges[j++] = b;
+        }
+      }
+      dim[i] = edges.sort();
     }
-    axes[i] = edges.sort();
     nbins_total *= edges.length+1;
   }
   if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
-  if (axes.length>1) throw new Error('multiple axes not yet implemented');
-  const axis = axes[0];
+  if (axes.length!==1 || axes[0].length!==1)
+    throw new Error('multiple axes not yet implemented');
+  const axis = axes[0][0];
 
   const nbins = nbins_total-2;
   const bmid = new Float32Array(nbins);
