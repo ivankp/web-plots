@@ -87,8 +87,6 @@ function make_plot(data) {
     }
     nbins_total = nbins_dim + (nbins_total-i)*(dim[i-1].length+1);
   }
-  console.log(bins.length);
-  console.log(nbins_total);
   if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
   if (axes.length!==1 || axes[0].length!==1)
