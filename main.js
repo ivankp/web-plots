@@ -55,7 +55,7 @@ function make_plot(data) {
       });
   }
   let { axes, bins } = data;
-  let nbins = 1;
+  let nbins_total = 1;
   for (let i=axes.length; i; ) {
     let n = 0;
     for (const x of axes[--i]) {
@@ -75,27 +75,47 @@ function make_plot(data) {
       }
     }
     axes[i] = edges.sort();
-    nbins *= edges.length+1;
+    nbins_total *= edges.length+1;
   }
-  if (nbins!==bins.length) throw new Error('wrong number of bins');
+  if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
   if (axes.length>1) throw new Error('multiple axes not yet implemented');
-
-  let ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
-  for (let i=1, n=nbins-1; i<n; ++i) {
-    const b = bins[i];
-    if (ey[0] > b) ey[0] = b;
-    if (ey[1] < b) ey[1] = b;
-  }
-  ey = ypadding(ey,false);
-
   const axis = axes[0];
+
+  const nbins = nbins_total-2;
+  const bmid = new Float32Array(nbins);
+  const bmin = new Float32Array(nbins);
+  const bmax = new Float32Array(nbins);
+
+  const ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
+  for (let i=0; i<nbins; ++i) {
+    const b = bins[i+1];
+    if (Array.isArray(b)) {
+      switch (b.length) {
+        case 0: break;
+        case 1: bmid[i] = b[0]; break;
+        default:
+          const u = b[1];
+          if (Array.isArray(u)) {
+            switch (u.length) {
+              case  0: break;
+              case  1: bmin[i] = -u[0]; bmax[i] = u[0]; break;
+              default: bmin[i] = -u[0]; bmax[i] = u[1];
+            }
+          } else { bmin[i] = -u; bmax[i] = u; }
+      }
+    } else { bmid[i] = b; }
+    bmin[i] += bmid[i];
+    bmax[i] += bmid[i];
+    if (bmin[i] < ey[0]) ey[0] = bmin[i];
+    if (bmax[i] > ey[1]) ey[1] = bmax[i];
+  }
 
   const sx = d3.scaleLinear()
     .domain([axis[0],axis[axis.length-1]])
     .range([margin.left, width - margin.right]);
   const sy = d3.scaleLinear()
-    .domain(ey)
+    .domain(ypadding(ey,false))
     .range([height - margin.bottom, margin.top]);
 
   const ax = d3.axisBottom(sx);
@@ -123,8 +143,13 @@ function make_plot(data) {
 
   { // draw histogram
     let d = '';
-    for (let i=0, n=axis.length-1; i<n; ++i)
-      d += `M${sx(axis[i])} ${sy(bins[i+1])}H${sx(axis[i+1])}`;
+    for (let i=0, n=axis.length-1; i<n; ++i) {
+      const a = round(sx(axis[i])), b = round(sx(axis[i+1])),
+            m = round((a+b)/2);
+      d += `M${a} ${round(sy(bmid[i]))}H${b}`;
+      if (bmin[i]!==bmid[i] || bmax[i]!==bmid[i])
+        d += `M${m} ${round(sy(bmin[i]))}V${round(sy(bmax[i]))}`;
+    }
     svg.append('path').attrs({
       d, fill: 'none', stroke: '#204A87', 'stroke-width': 2
     });
