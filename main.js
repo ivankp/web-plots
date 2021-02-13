@@ -45,12 +45,12 @@ function ypadding([min,max],logy) {
 
 function make_plot(data) {
   const fig = clear(_id('plot'));
-  { const cap = make(fig,'figcaption');
-    if (data.title)
-      data.title.split(/\^(\d+)/).forEach((x,i) => {
-        if (i%2) make(cap,'sup').textContent = x;
-        else cap.appendChild(document.createTextNode(x));
-      });
+  if (data.title) {
+    const cap = make(fig,'figcaption');
+    data.title.split(/\^(\d+)/).forEach((x,i) => {
+      if (i%2) make(cap,'sup').textContent = x;
+      else cap.appendChild(document.createTextNode(x));
+    });
   }
   let { axes, bins } = data;
   let nbins_total = 1;
@@ -154,6 +154,28 @@ function make_plot(data) {
     svg.append('path').attrs({
       d, fill: 'none', stroke: color, 'stroke-width': 2
     });
+  }
+
+  const info = make(fig,'div');
+  info.className = 'info';
+  let bin;
+  svg_node.onmousemove = function(e) {
+    const cmt = this.getScreenCTM();
+    if (e.touches) e = e.touches[0];
+    bin = d3.bisectLeft(axis,sx.invert((e.clientX-cmt.e)/cmt.a));
+    if (bin > nbins) bin = nbins;
+    info.textContent =
+      `bin ${bin} [${round(axis[bin-1])},${round(axis[bin])}): ${JSON.stringify(bins[bin])}`;
+  }
+  if (bins[0]) {
+    const info = make(fig,'div');
+    info.className = 'info';
+    info.textContent = `underflow: ${JSON.stringify(bins[bin])}`;
+  }
+  if (bins[bins.length-1]) {
+    const info = make(fig,'div');
+    info.className = 'info';
+    info.textContent = `overflow: ${JSON.stringify(bins[bin])}`;
   }
 }
 
