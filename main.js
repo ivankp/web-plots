@@ -140,22 +140,25 @@ function make_plot(data) {
   }
 
   { // draw histogram
-    let d = '';
+    const { style } = data;
+    const con = style && style.connected;
+
+    let d = '', d2 = '';
     for (let i=0, n=axis.length-1; i<n; ++i) {
-      const a = round(sx(axis[i])), b = round(sx(axis[i+1])),
-            m = round((a+b)/2);
-      d += `M${a} ${round(sy(bmid[i]))}H${b}`;
+      const a = sx(axis[i]), b = sx(axis[i+1]), m = (a+b)/2;
+      d += `${(con&&i)?'L':'M'}${round(a)} ${round(sy(bmid[i]))}H${round(b)}`;
       if (bmin[i]!==bmid[i] || bmax[i]!==bmid[i])
-        d += `M${m} ${round(sy(bmin[i]))}V${round(sy(bmax[i]))}`;
+        d2 += `M${round(m)} ${round(sy(bmin[i]))}V${round(sy(bmax[i]))}`;
     }
+    d += d2;
     svg.append('path').attrs({
-      d, fill: 'none', stroke: '#204A87', 'stroke-width': 2
+      d, fill: 'none', stroke: '#009', 'stroke-width': 2
     });
   }
 }
 
 function load_plot(path) {
-  fetch('data/'+path+'.json', { method: 'GET' })
+  fetch(root+'data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     console.log(r);
@@ -163,14 +166,16 @@ function load_plot(path) {
   }).catch(e => { alert(e.message); throw e; });
 }
 
+let root = 'https://ivankp.github.io/web-plots/';
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.location.href.match(/^http/)) root = '';
   const search = window.location.search.match(/(?<=\?)[^&]+/);
   if (search) {
     const path = decodeURIComponent(search[0]);
     window.history.replaceState({ path }, '', '?'+search[0]);
     load_plot(path);
   }
-  fetch('data_tree.json', { method: 'GET' })
+  fetch(root+'data_tree.json', { method: 'GET' })
   .then(r => r.json())
   .then(r => {
     const dirs = [ ];
