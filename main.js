@@ -53,14 +53,15 @@ function make_plot(data) {
     });
   }
   let { axes, bins } = data;
-  if (!Array.isArray(axes))
-    throw new Error('"axes" must be an array');
+  if (!(Array.isArray(axes) && axes.length))
+    throw new Error('"axes" must be a non-empty array');
 
   let nbins_total = 1;
   for (const dim of axes) {
-    if (!Array.isArray(dim))
-      throw new Error('elements of "axes" must be arrays');
-    for (let i=0; i<dim.length; ++i) {
+    if (!(Array.isArray(dim) && dim.length))
+      throw new Error('elements of "axes" must be non-empty arrays');
+    let nbins_dim = 0, i = 0;
+    for (; i<dim.length; ++i) {
       const axis = dim[i];
       if (!Array.isArray(axis))
         throw new Error('axis definition must be an array');
@@ -82,9 +83,12 @@ function make_plot(data) {
         }
       }
       dim[i] = edges.sort();
+      nbins_dim += edges.length+1;
     }
-    nbins_total *= edges.length+1;
+    nbins_total = nbins_dim + (nbins_total-i)*(dim[i-1].length+1);
   }
+  console.log(bins.length);
+  console.log(nbins_total);
   if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
   if (axes.length!==1 || axes[0].length!==1)
