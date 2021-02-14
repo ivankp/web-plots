@@ -106,6 +106,7 @@ function make_plot(data) {
         case 0: break;
         case 1: bmid[i] = b[0]; break;
         default:
+          bmid[i] = b[0];
           const u = b[1];
           if (Array.isArray(u)) {
             switch (u.length) {
@@ -129,17 +130,21 @@ function make_plot(data) {
     .domain(ypadding(ey,false))
     .range([height - margin.bottom, margin.top]);
 
-  const ax = d3.axisBottom(sx);
-  if (axis.length < 11) ax.tickValues(axis);
-  ax.tickSizeOuter(0);
-  const ay = d3.axisLeft(sy);
-  ay.tickSizeOuter(0);
-
   const svg = d3.select(fig).append('svg')
-    .attrs({ viewBox: [0,0,width,height], width: width, height: height });
+    .attrs({ viewBox: [0,0,width,height], width, height });
   const svg_node = svg.node();
 
   { // draw axes
+    const ax = d3.axisBottom(sx);
+    if (axis.length < 11) ax.tickValues(axis);
+    ax.tickSizeOuter(0);
+    const ay = d3.axisLeft(sy);
+    ay.tickSizeOuter(0);
+
+    { const rx = sx.range().map(x => Math.log10(Math.abs(x)));
+      const m = rx[ rx[0] < rx[1] ? 1 : 0 ];
+    }
+
     let g = svg.append('g')
     g.append('g').attrs({
       transform: `translate(0,${height-margin.bottom})`
@@ -167,7 +172,6 @@ function make_plot(data) {
         }).text(labels[1]);
     }
   }
-
   { // draw histogram
     const { style={} } = data;
     const { connect=false, color='#009' } = style;
