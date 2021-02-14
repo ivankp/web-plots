@@ -143,10 +143,10 @@ function make_plot(data) {
 
     const ax = d3.axisBottom(sx);
     if (axis.length < 11) ax.tickValues(axis);
-    if (lx) ax.tickFormat(x => fmt(x*10**lx));
+    ax.tickFormat(x => fmt(x*10**lx));
     ax.tickSizeOuter(0);
     const ay = d3.axisLeft(sy);
-    if (ly) ay.tickFormat(x => fmt(x*10**ly));
+    ay.tickFormat(x => fmt(x*10**ly));
     ay.tickSizeOuter(0);
 
     const g = svg.append('g')
