@@ -10,7 +10,7 @@ function clear(x) {
 }
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
 
-const margin = { top: 10, right: 20, bottom: 20, left: 30 },
+const margin = { top: 10, right: 20, bottom: 35, left: 45 },
       width  = 500 + margin.left + margin.right,
       height = 400 + margin.bottom + margin.top;
 
@@ -140,7 +140,7 @@ function make_plot(data) {
   const svg_node = svg.node();
 
   { // draw axes
-    const g = svg.append('g')
+    let g = svg.append('g')
     g.append('g').attrs({
       transform: `translate(0,${height-margin.bottom})`
     }).call(ax);
@@ -150,6 +150,22 @@ function make_plot(data) {
     g.selectAll('line,path').attr('stroke','#000');
     g.selectAll('text').attr('fill','#000');
     g.selectAll('*').attr('class',null);
+
+    const { labels=[] } = data;
+    const nl = labels.length;
+    if (nl>0) {
+      g = g.append('g').attrs({
+        'text-anchor': 'end', 'font-family': 'sans-serif', 'font-size': 12,
+        fill: '#000'
+      });
+      g.append('text').attrs({
+        x: sx.range()[1], y: height-5
+      }).text(labels[0]);
+      if (nl>1)
+        g.append('text').attrs({
+          x: -sy.range()[1], y: 12, transform: 'rotate(270)'
+        }).text(labels[1]);
+    }
   }
 
   { // draw histogram
