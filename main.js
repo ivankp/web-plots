@@ -10,7 +10,7 @@ function clear(x) {
 }
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
 
-const margin = { top: 10, right: 20, bottom: 35, left: 45 },
+const margin = { top: 10, right: 35, bottom: 35, left: 45 },
       width  = 500 + margin.left + margin.right,
       height = 400 + margin.bottom + margin.top;
 
@@ -135,17 +135,21 @@ function make_plot(data) {
   const svg_node = svg.node();
 
   { // draw axes
+    const fmt = d3.format(",.3~f");
+    const lx =
+      -3*(Math.log10(Math.max(...sx.domain().map(x => Math.abs(x))))/3>>0);
+    const ly =
+      -3*(Math.log10(Math.max(...sy.domain().map(x => Math.abs(x))))/3>>0);
+
     const ax = d3.axisBottom(sx);
     if (axis.length < 11) ax.tickValues(axis);
+    if (lx) ax.tickFormat(x => fmt(x*10**lx));
     ax.tickSizeOuter(0);
     const ay = d3.axisLeft(sy);
+    if (ly) ay.tickFormat(x => fmt(x*10**ly));
     ay.tickSizeOuter(0);
 
-    { const rx = sx.range().map(x => Math.log10(Math.abs(x)));
-      const m = rx[ rx[0] < rx[1] ? 1 : 0 ];
-    }
-
-    let g = svg.append('g')
+    const g = svg.append('g')
     g.append('g').attrs({
       transform: `translate(0,${height-margin.bottom})`
     }).call(ax);
@@ -159,17 +163,39 @@ function make_plot(data) {
     const { labels=[] } = data;
     const nl = labels.length;
     if (nl>0) {
-      g = g.append('g').attrs({
+      const g2 = g.append('g').attrs({
         'text-anchor': 'end', 'font-family': 'sans-serif', 'font-size': 12,
         fill: '#000'
       });
-      g.append('text').attrs({
+      g2.append('text').attrs({
         x: sx.range()[1], y: height-5
       }).text(labels[0]);
       if (nl>1)
-        g.append('text').attrs({
+        g2.append('text').attrs({
           x: -sy.range()[1], y: 12, transform: 'rotate(270)'
         }).text(labels[1]);
+    }
+
+    if (lx||ly) {
+      const g2 = g.append('g').attrs({
+        'text-anchor': 'start', 'font-family': 'sans-serif', fill: '#000'
+      });
+      if (lx) {
+        const bb = g2.append('text').attrs({
+          x: sx.range()[1]+4, y: sy.range()[0], 'font-size': 10
+        }).text('×10').node().getBBox();
+        g2.append('text').attrs({
+          x: bb.x+bb.width-1, y: bb.y+3, 'font-size': 9
+        }).text(lx<0 ? `${-lx}` : `−${lx}`);
+      }
+      if (ly) {
+        const bb = g2.append('text').attrs({
+          x: sx.range()[0]+4, y: sy.range()[1]+7, 'font-size': 10
+        }).text('×10').node().getBBox();
+        g2.append('text').attrs({
+          x: bb.x+bb.width-1, y: bb.y+3, 'font-size': 9
+        }).text(ly<0 ? `${-ly}` : `−${ly}`);
+      }
     }
   }
   { // draw histogram
@@ -189,17 +215,20 @@ function make_plot(data) {
     });
   }
 
-  const info = make(fig,'div');
-  info.className = 'info';
-  let bin;
-  svg_node.onmousemove = function(e) {
-    const cmt = this.getScreenCTM();
-    if (e.touches) e = e.touches[0];
-    bin = d3.bisectLeft(axis,sx.invert((e.clientX-cmt.e)/cmt.a));
-    if (bin < 1) bin = 1;
-    else if (bin > nbins) bin = nbins;
-    info.textContent =
-      `bin ${bin} [${round(axis[bin-1])},${round(axis[bin])}): ${JSON.stringify(bins[bin])}`;
+  { const info = make(fig,'div');
+    info.className = 'info';
+    const fmt = d3.format('.3~g');
+    let bin;
+    svg_node.onmousemove = function(e) {
+      const cmt = this.getScreenCTM();
+      if (e.touches) e = e.touches[0];
+      bin = d3.bisectLeft(axis,sx.invert((e.clientX-cmt.e)/cmt.a));
+      if (bin < 1) bin = 1;
+      else if (bin > nbins) bin = nbins;
+      info.textContent =
+        `bin ${bin} [${fmt(axis[bin-1])},${fmt(axis[bin])}): `
+        + JSON.stringify(bins[bin]);
+    }
   }
   if (bins[0]) {
     const info = make(fig,'div');
