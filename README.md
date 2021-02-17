@@ -43,7 +43,7 @@ Here are a few examples of edges definitions:
     - `[3,[0.1,0.2]]`: a bin value of 3 with **down** uncertainty of 0.1 and **up** uncertainty of 0.2;
     - `[4,null,"info"]`: a bin value of 4 and no uncertainty;
       trailing bin array elements are not used for drawing, but are displayed with the bin info.
-      
+
 If multiple axes are specified, the bin ordering is as follows:
 
 `bin_index(i0,i1,...) = ((i0*n1 + i1)*n2 + i2)*n3 + i3 . . .`,
@@ -54,6 +54,9 @@ That is, bins in subsequent dimensions subdivide bins in the preceding ones.
 # Features
 - Press `Ctrl+s` to save the displayed plot in SVG format.
 - Move the mouse over the plot to display bin content.
+
+# Tools
+- `root2json`: save histograms from a ROOT file to JSON files, recursively creating directories.
 
 # Technical notes
 The web script [`main.js`](main.js) is written in JavaScript using the [**d3js** library](https://d3js.org/) v6.
