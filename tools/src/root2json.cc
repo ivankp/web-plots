@@ -64,8 +64,7 @@ void traverse(const TDirectory* dir, const fs::path& path, int lvl=0) {
         const TAxis* const a = axes[i];
         if (i) f << ',';
         const auto* bins = a->GetXbins();
-        int n = bins->GetSize();
-        if (n) {
+        if (int n = bins->GetSize()) {
           const auto* b = bins->GetArray();
           f << "  [[ ";
           for (int i=0; i<n; ++i) {
@@ -75,7 +74,7 @@ void traverse(const TDirectory* dir, const fs::path& path, int lvl=0) {
           f << " ]]";
           nb[i] = n+1;
         } else {
-          int n = a->GetNbins();
+          n = a->GetNbins();
           f << "  [[ ["
             << a->GetXmin() << ','
             << a->GetXmax() << ','
