@@ -34,10 +34,10 @@ label {
   margin: 0 25px 0 0;
 }
 
-#plot {
+figure {
   margin: 0;
 }
-#plot > figcaption {
+figure > figcaption {
   text-align: center;
   font-family: sans-serif;
 }
@@ -141,7 +141,8 @@ a.ext::after {
 <div class="left">
   <div id="menu"></div>
   <p>
-    <input type="file" id="local_file" accept=".json">
+    <input type="file" id="local_file" accept=".json" style="display: none;">
+    <button id="local_file_button">Open file</button>
   </p>
   <p style="font-size: smaller;">
     Click to expand or show items.<br>
@@ -153,7 +154,11 @@ a.ext::after {
     <a href="https://github.com/ivankp/web-plots" target="_blank">GitHub</a>
   </p>
 </div>
-<figure id="plot"></figure>
+
+<div>
+  <div id="figure_select"></div>
+  <div id="figures"></div>
+</div>
 
 </div>
 </body>

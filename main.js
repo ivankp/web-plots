@@ -11,6 +11,13 @@ function clear(x) {
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
 const last = xs => xs[xs.length-1];
 
+function mapobj(obj,f) {
+  return Object.fromEntries((function*(){
+    for (const entry of Object.entries(obj))
+      yield f(...entry);
+  })());
+}
+
 const margin = { top: 10, right: 35, bottom: 35, left: 45 },
       width  = 500 + margin.left + margin.right,
       height = 400 + margin.bottom + margin.top;
@@ -66,33 +73,37 @@ function arreq() {
 }
 
 function make_plot(data) {
-  const fig = clear(_id('plot'));
-  if (data.title) {
-    const cap = make(fig,'figcaption');
-    data.title.split(/\^(\d+)/).forEach((x,i) => {
-      if (i%2) make(cap,'sup').textContent = x;
-      else cap.appendChild(document.createTextNode(x));
+  const { opts={} } = data;
+  const { normalize=false, overlay=false } = opts;
+
+  if (data.hists.length > 1 && !overlay) {
+    const select = make(clear(_id('figure_select')),'select');
+    const single_hists = data.hists.map((hist,i) => {
+      make(select,'option').textContent = hist.name || `${i}`;
+      return mapobj(data, (key,val) => [key, (key==='hists' ? [hist] : val)]);
     });
+    select.onchange = function() {
+      make_plot(single_hists[this.options.selectedIndex]);
+    };
+    select.selectedIndex = 0;
+    select.onchange();
+    select.focus();
+    return;
   }
 
   const ex = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY],
         ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
   const hists = [ ];
 
-  const { opts={} } = data;
-  const { normalize=false } = opts;
-
-  for (const { name, axes, bins, style={} } of data.hists) {
+  for (let { name, axes, bins, style={} } of data.hists) {
     if (!(Array.isArray(axes) && axes.length))
       throw new Error('"axes" must be a non-empty array');
-
     let nbins_total = 1;
-    for (const dim of axes) {
+    axes = axes.map(dim => {
       if (!(Array.isArray(dim) && dim.length))
         throw new Error('elements of "axes" must be non-empty arrays');
-      let nbins_dim = 0, i = 0;
-      for (; i<dim.length; ++i) {
-        const axis = dim[i];
+      let nbins_dim = 0;
+      dim = dim.map(axis => {
         if (!Array.isArray(axis))
           throw new Error('axis definition must be an array');
         let n = 0;
@@ -112,11 +123,13 @@ function make_plot(data) {
             edges[j++] = b;
           }
         }
-        dim[i] = edges.sort();
         nbins_dim += edges.length+1;
-      }
-      nbins_total = nbins_dim + (nbins_total-i)*(dim[i-1].length+1);
-    }
+        return edges.sort();
+      });
+      const n = dim.length;
+      nbins_total = nbins_dim + (nbins_total-n)*(dim[n-1].length+1);
+      return dim;
+    });
     if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
     if (axes.length!==1 || axes[0].length!==1)
@@ -170,6 +183,15 @@ function make_plot(data) {
 
     hists.push({nbins,bmin,bmid,bmax,axis,style});
   } // end hists loop
+
+  const fig = make(clear(_id('figures')),'figure');
+  if (data.title) {
+    const cap = make(fig,'figcaption');
+    data.title.split(/\^(\d+)/).forEach((x,i) => {
+      if (i%2) make(cap,'sup').textContent = x;
+      else cap.appendChild(document.createTextNode(x));
+    });
+  }
 
   const sx = d3.scaleLinear()
     .domain(ex)
@@ -397,13 +419,18 @@ document.addEventListener('DOMContentLoaded', () => {
     })(r,ul);
   }).catch(e => { alert(e.message); throw e; });
 
-  _id('local_file').onchange = function() {
+  _id('local_file').onchange = function(e) {
     const files = this.files;
     if (files && files.length==1) {
       const f = new FileReader();
       f.onload = (e => { make_plot(JSON.parse(e.target.result)); });
       f.readAsText(files[0]);
     }
+    this.value = null;
+  };
+  _id('local_file_button').onclick = function(e) {
+    e.preventDefault();
+    _id('local_file').click();
   };
 });
 window.onpopstate = function(e) {
@@ -440,7 +467,7 @@ function save_svg(svg) {
   dummy_a.click();
 }
 
-window.addEventListener('keydown', function(e) { // Ctrl + s
+window.addEventListener('keydown', e => { // Ctrl + s
   if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey))
     switch (e.which || e.keyCode) {
       case 83:
