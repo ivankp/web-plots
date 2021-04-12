@@ -1,12 +1,14 @@
 {
 "title": "Title",
 "labels": [ "x", "y" ],
-"axes": [[[ 1e4,2e5,5e5,1e5 ]]],
-"bins": [
-  0, 1e6, [2e6,5e5], [2e6,[1e5,2e5]], 5
-],
-"style": {
-  "connect": true,
-  "color": "#C00"
-}
+"hists": [{
+  "axes": [[[ 1e4,2e5,5e5,1e5 ]]],
+  "bins": [
+    0, 1e6, [2e6,5e5], [2e6,[1e5,2e5]], 5
+  ],
+  "style": {
+    "connect": true,
+    "color": "#C00"
+  }
+}]
 }

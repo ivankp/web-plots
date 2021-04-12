@@ -9,6 +9,7 @@ function clear(x) {
   return x;
 }
 const round = x => x.toFixed(4).replace(/\.?0*$/,'');
+const last = xs => xs[xs.length-1];
 
 const margin = { top: 10, right: 35, bottom: 35, left: 45 },
       width  = 500 + margin.left + margin.right,
@@ -43,6 +44,27 @@ function ypadding([min,max],logy) {
   return [ min, max ];
 }
 
+function rany(arg) {
+  if (!Array.isArray(arg)) return !!arg;
+  for (const x of arg)
+    if (rany(x)) return true;
+  return false;
+}
+
+function arreq() {
+  const nargs = arguments.length;
+  if (nargs < 2) return true;
+  const a = arguments[0];
+  const n = a.length;
+  for (let j=1; j<nargs; ++j) {
+    const b = arguments[j];
+    if (b.length !== n) return false;
+    for (let i=0; i<n; ++i)
+      if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 function make_plot(data) {
   const fig = clear(_id('plot'));
   if (data.title) {
@@ -52,79 +74,105 @@ function make_plot(data) {
       else cap.appendChild(document.createTextNode(x));
     });
   }
-  let { axes, bins } = data;
-  if (!(Array.isArray(axes) && axes.length))
-    throw new Error('"axes" must be a non-empty array');
 
-  let nbins_total = 1;
-  for (const dim of axes) {
-    if (!(Array.isArray(dim) && dim.length))
-      throw new Error('elements of "axes" must be non-empty arrays');
-    let nbins_dim = 0, i = 0;
-    for (; i<dim.length; ++i) {
-      const axis = dim[i];
-      if (!Array.isArray(axis))
-        throw new Error('axis definition must be an array');
-      let n = 0;
-      for (const x of axis) {
-        if (typeof x === 'number') ++n;
-        else n += x[2]+1;
-      }
-      const edges = new Float32Array(n);
-      let j = 0;
-      for (const x of axis) {
-        if (typeof x === 'number') edges[j++] = x;
-        else {
-          const [ a, b, n ] = x;
-          const d = (b-a)/n;
-          for (let i=0; i<n; ++i)
-            edges[j++] = a + d*i;
-          edges[j++] = b;
+  const ex = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY],
+        ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
+  const hists = [ ];
+
+  const { opts={} } = data;
+  const { normalize=false } = opts;
+
+  for (const { name, axes, bins, style={} } of data.hists) {
+    if (!(Array.isArray(axes) && axes.length))
+      throw new Error('"axes" must be a non-empty array');
+
+    let nbins_total = 1;
+    for (const dim of axes) {
+      if (!(Array.isArray(dim) && dim.length))
+        throw new Error('elements of "axes" must be non-empty arrays');
+      let nbins_dim = 0, i = 0;
+      for (; i<dim.length; ++i) {
+        const axis = dim[i];
+        if (!Array.isArray(axis))
+          throw new Error('axis definition must be an array');
+        let n = 0;
+        for (const x of axis) {
+          if (typeof x === 'number') ++n;
+          else n += x[2]+1;
         }
+        const edges = new Float32Array(n);
+        let j = 0;
+        for (const x of axis) {
+          if (typeof x === 'number') edges[j++] = x;
+          else {
+            const [ a, b, n ] = x;
+            const d = (b-a)/n;
+            for (let i=0; i<n; ++i)
+              edges[j++] = a + d*i;
+            edges[j++] = b;
+          }
+        }
+        dim[i] = edges.sort();
+        nbins_dim += edges.length+1;
       }
-      dim[i] = edges.sort();
-      nbins_dim += edges.length+1;
+      nbins_total = nbins_dim + (nbins_total-i)*(dim[i-1].length+1);
     }
-    nbins_total = nbins_dim + (nbins_total-i)*(dim[i-1].length+1);
-  }
-  if (nbins_total!==bins.length) throw new Error('wrong number of bins');
+    if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
-  if (axes.length!==1 || axes[0].length!==1)
-    throw new Error('multiple axes not yet implemented');
-  const axis = axes[0][0];
+    if (axes.length!==1 || axes[0].length!==1)
+      throw new Error('multiple axes not yet implemented');
+    const axis = axes[0][0];
 
-  const nbins = nbins_total-2;
-  const bmid = new Float32Array(nbins);
-  const bmin = new Float32Array(nbins);
-  const bmax = new Float32Array(nbins);
+    if (axis[0] < ex[0]) ex[0] = axis[0];
+    if (last(axis) > ex[1]) ex[1] = last(axis);
 
-  const ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
-  for (let i=0; i<nbins; ++i) {
-    const b = bins[i+1];
-    if (Array.isArray(b)) {
-      switch (b.length) {
-        case 0: break;
-        case 1: bmid[i] = b[0]; break;
-        default:
-          bmid[i] = b[0];
-          const u = b[1];
-          if (Array.isArray(u)) {
-            switch (u.length) {
-              case  0: break;
-              case  1: bmin[i] = -u[0]; bmax[i] = u[0]; break;
-              default: bmin[i] = -u[0]; bmax[i] = u[1];
-            }
-          } else { bmin[i] = -u; bmax[i] = u; }
+    const nbins = nbins_total-2;
+    const bmid = new Float32Array(nbins);
+    const bmin = new Float32Array(nbins);
+    const bmax = new Float32Array(nbins);
+
+    for (let i=0; i<nbins; ++i) {
+      const b = bins[i+1];
+      if (Array.isArray(b)) {
+        switch (b.length) {
+          case 0: break;
+          case 1: bmid[i] = b[0]; break;
+          default:
+            bmid[i] = b[0];
+            const u = b[1];
+            if (Array.isArray(u)) {
+              switch (u.length) {
+                case  0: break;
+                case  1: bmin[i] = -u[0]; bmax[i] = u[0]; break;
+                default: bmin[i] = -u[0]; bmax[i] = u[1];
+              }
+            } else { bmin[i] = -u; bmax[i] = u; }
+        }
+      } else { bmid[i] = b; }
+      bmin[i] += bmid[i];
+      bmax[i] += bmid[i];
+      if (bmin[i] < ey[0]) ey[0] = bmin[i];
+      if (bmax[i] > ey[1]) ey[1] = bmax[i];
+    }
+
+    if (normalize) {
+      const sum = bmid.reduce((a,x) => a+x);
+      if (sum!==0) {
+        for (let i=0; i<nbins; ++i) {
+          bmid[i] /= sum;
+          bmin[i] /= sum;
+          bmax[i] /= sum;
+        }
+        ey[0] /= sum;
+        ey[1] /= sum;
       }
-    } else { bmid[i] = b; }
-    bmin[i] += bmid[i];
-    bmax[i] += bmid[i];
-    if (bmin[i] < ey[0]) ey[0] = bmin[i];
-    if (bmax[i] > ey[1]) ey[1] = bmax[i];
-  }
+    }
+
+    hists.push({nbins,bmin,bmid,bmax,axis,style});
+  } // end hists loop
 
   const sx = d3.scaleLinear()
-    .domain([axis[0],axis[axis.length-1]])
+    .domain(ex)
     .range([margin.left, width - margin.right]);
   const sy = d3.scaleLinear()
     .domain(ypadding(ey,false))
@@ -142,7 +190,10 @@ function make_plot(data) {
       -3*(Math.log10(Math.max(...sy.domain().map(x => Math.abs(x))))/3>>0);
 
     const ax = d3.axisBottom(sx);
-    if (axis.length < 11) ax.tickValues(axis);
+    if (arreq(...hists.map(h => h.axis))) { // ticks at edges
+      const axis = hists[0].axis;
+      if (axis.length < 11) ax.tickValues(axis);
+    }
     ax.tickFormat(x => fmt(x*10**lx));
     ax.tickSizeOuter(0);
     const ay = d3.axisLeft(sy);
@@ -185,7 +236,7 @@ function make_plot(data) {
           x: sx.range()[1]+4, y: sy.range()[0], 'font-size': 10
         }).text('×10').node().getBBox();
         g2.append('text').attrs({
-          x: bb.x+bb.width-1, y: bb.y+3, 'font-size': 9
+          x: bb.x+bb.width, y: bb.y+3, 'font-size': 9
         }).text(lx<0 ? `${-lx}` : `−${lx}`);
       }
       if (ly) {
@@ -193,14 +244,15 @@ function make_plot(data) {
           x: sx.range()[0]+4, y: sy.range()[1]+7, 'font-size': 10
         }).text('×10').node().getBBox();
         g2.append('text').attrs({
-          x: bb.x+bb.width-1, y: bb.y+3, 'font-size': 9
+          x: bb.x+bb.width, y: bb.y+3, 'font-size': 9
         }).text(ly<0 ? `${-ly}` : `−${ly}`);
       }
     }
   }
-  { // draw histogram
-    const { style={} } = data;
-    const { connect=false, color='#009' } = style;
+
+  for (const hist of hists) { // draw histograms
+    const { nbins, bmin, bmid, bmax, axis } = hist;
+    const { connect=false, color='#009' } = hist.style;
 
     let d = '', d2 = '';
     for (let i=0, n=axis.length-1; i<n; ++i) {
@@ -215,38 +267,65 @@ function make_plot(data) {
     });
   }
 
-  { const info = make(fig,'div');
+  if (data.hists.some(h => 'name' in h)) { // draw legend
+    const g = svg.append('g').attrs({
+      'text-anchor': 'start', 'font-family': 'sans-serif', 'font-size': 16
+    });
+    let i = 0;
+    for (const h of data.hists) {
+      const { name=null, style={} } = h;
+      if (!name) continue;
+      g.append('text').attrs({
+        x: 0, y: i*20, fill: style.color || '#009'
+      }).text(name);
+      ++i;
+    }
+    const bb = g.node().getBBox();
+    g.attr('transform',
+      `translate(${sx.range()[1]-Math.ceil(bb.width)-bb.x-5},` +
+      `${sy.range()[1]-bb.y+5})`);
+  }
+
+  { // print bin info
+    const info = make(fig,'div');
     info.className = 'info';
-    const fmt = d3.format('.3~g');
-    let bin;
+    const n = hists.length;
+    const p = hists.map(() => make(info,'p'));
     svg_node.onmousemove = function(e) {
       const cmt = this.getScreenCTM();
       if (e.touches) e = e.touches[0];
-      bin = d3.bisectLeft(axis,sx.invert((e.clientX-cmt.e)/cmt.a));
-      if (bin < 1) bin = 1;
-      else if (bin > nbins) bin = nbins;
-      info.textContent =
-        `bin ${bin} [${fmt(axis[bin-1])},${fmt(axis[bin])}): `
-        + JSON.stringify(bins[bin]);
+      const x = sx.invert((e.clientX-cmt.e)/cmt.a);
+      for (let i=0; i<n; ++i) {
+        const {nbins,axis} = hists[i];
+        const {bins} = data.hists[i];
+        let bin = d3.bisectLeft(axis,x);
+        if (bin < 1) bin = 1;
+        else if (bin > nbins) bin = nbins;
+        p[i].textContent =
+          `bin ${bin} [${axis[bin-1]},${axis[bin]}): `
+          + JSON.stringify(bins[bin]);
+      }
     }
-  }
-  if (bins[0]) {
-    const info = make(fig,'div');
-    info.className = 'info';
-    info.textContent = `underflow: ${JSON.stringify(bins[0])}`;
-  }
-  if (bins[bins.length-1]) {
-    const info = make(fig,'div');
-    info.className = 'info';
-    info.textContent = `overflow: ${JSON.stringify(bins[bins.length-1])}`;
+    const t = make(info,'table');
+    function print_overflow(bins,label) {
+      const tr = make(t,'tr');
+      if (rany(bins)) {
+        make(tr,'td').textContent = label;
+        const td = make(tr,'td');
+        for (const bin of bins)
+          make(td,'p').textContent = JSON.stringify(bin);
+      }
+    }
+    print_overflow(data.hists.map(h => h.bins[0]),'underflow:');
+    print_overflow(data.hists.map(h => last(h.bins)),'overflow:');
   }
 }
 
 function load_plot(path) {
   fetch(root+'data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
-  .then(make_plot
-  ).catch(e => { alert(e.message); throw e; });
+  .then(make_plot)
+  .catch(e => { alert(e.message); throw e; });
 }
 
 let root = 'https://ivankp.github.io/web-plots/';
@@ -265,7 +344,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const ul = make(_id('menu'),'ul');
     ul.className = 'file-tree';
     (function read_tree(tree,ul) {
-      for (const [name,x] of Object.entries(tree)) {
+      for (const [,name,x] of
+        Object.entries(tree).map(x => {
+          const [key,val] = x;
+          const tokens = key.split(
+            /([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)/);
+          for (let i=0, n = tokens.length; i<n; ++i) {
+            if (i%2) tokens[i] = parseFloat(tokens[i]);
+            else tokens[i] = tokens[i].toLowerCase();
+          }
+          return [ tokens, key, val ];
+        }).sort((a,b) => {
+          a = a[0]; b = b[0];
+          const n = Math.min(a.length,b.length);
+          for (let i=0; i<n; ++i) {
+            if (a[i] < b[i]) return -1;
+            if (b[i] < a[i]) return  1;
+          }
+          return a.length - b.length;
+        })
+      ) {
         dirs.push(name);
         const li = make(ul,'li');
         if (typeof x === 'object') {
@@ -283,12 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
           link.href = root+'data/'+path+'.json';
           link.target = '_blank';
           link.onclick = function(e) {
-            e.preventDefault();
-            const s = window.history.state;
-            if (!(s && s.path===path))
-              window.history.pushState(
-                { path }, '', '?'+encodeURIComponent(path));
-            load_plot(path);
+            if (!e.ctrlKey) {
+              e.preventDefault();
+              const s = window.history.state;
+              if (!(s && s.path===path))
+                window.history.pushState(
+                  { path }, '', '?'+encodeURIComponent(path));
+              load_plot(path);
+            }
           };
         }
         dirs.pop();

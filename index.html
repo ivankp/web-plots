@@ -84,14 +84,63 @@ ul.file-tree li:not(.exp) ul {
   font-family: monospace;
   font-size: smaller;
 }
+.info p, .info tr, .info td {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.info table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+.info td {
+  vertical-align: top;
+}
+.info td:nth-child(2) {
+  padding-left: 3px;
+}
+
+.left > p {
+  margin: 10px 0;
+}
+
+kbd {
+  background-color: #eee;
+  border-radius: 3px;
+  border: 1px solid #b4b4b4;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 2px 0 0 rgba(255, 255, 255, .7) inset;
+  color: #333;
+  display: inline-block;
+  font-size: .85em;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+a.ext::after {
+  content: "\2937";
+  display: inline-block;
+  transform: rotate(-90deg);
+  margin-left: 3px;
+}
 </style>
 <script src="d3v6.js"></script>
 <script src="main.js"></script>
 </head>
-<body class="flex">
+<body>
+<div class="flex">
 
-<div id="menu"></div>
+<div class="left">
+  <div id="menu"></div>
+  <p style="font-size: smaller;">
+    Click to expand or show items.<br>
+    <kbd>Ctrl</kbd>-click to show data.<br>
+    Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save the plot.
+  </p>
+</div>
 <figure id="plot"></figure>
 
+</div>
 </body>
 </html>
