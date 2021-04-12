@@ -322,6 +322,7 @@ function make_plot(data) {
 }
 
 function load_plot(path) {
+  _id('local_file').value = null;
   fetch(root+'data/'+path+'.json', { method: 'GET' })
   .then(r => r.json())
   .then(make_plot)
@@ -395,6 +396,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     })(r,ul);
   }).catch(e => { alert(e.message); throw e; });
+
+  _id('local_file').onchange = function() {
+    const files = this.files;
+    if (files && files.length==1) {
+      const f = new FileReader();
+      f.onload = (e => { make_plot(JSON.parse(e.target.result)); });
+      f.readAsText(files[0]);
+    }
+  };
 });
 window.onpopstate = function(e) {
   if (e.state!==null) load_plot(e.state.path);
@@ -431,13 +441,21 @@ function save_svg(svg) {
 }
 
 window.addEventListener('keydown', function(e) { // Ctrl + s
-  if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey)
-    && ((e.which || e.keyCode) === 83)
-  ) {
-    const svg = _id('plot').querySelector('svg');
-    if (svg) {
-      e.preventDefault();
-      save_svg(svg);
+  if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey))
+    switch (e.which || e.keyCode) {
+      case 83:
+        const svg = _id('plot').querySelector('svg');
+        if (svg) {
+          e.preventDefault();
+          save_svg(svg);
+        }
+        break;
+      case 79:
+        const input = _id('local_file');
+        if (input) {
+          e.preventDefault();
+          input.click();
+        }
+        break;
     }
-  }
 });

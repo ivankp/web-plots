@@ -124,6 +124,13 @@ a.ext::after {
   transform: rotate(-90deg);
   margin-left: 3px;
 }
+
+#local_file {
+  white-space: normal;
+  word-wrap: break-word;
+  width: 200px;
+  overflow: auto;
+}
 </style>
 <script src="d3v6.js"></script>
 <script src="main.js"></script>
@@ -133,10 +140,17 @@ a.ext::after {
 
 <div class="left">
   <div id="menu"></div>
+  <p>
+    <input type="file" id="local_file" accept=".json">
+  </p>
   <p style="font-size: smaller;">
     Click to expand or show items.<br>
     <kbd>Ctrl</kbd>-click to show data.<br>
-    Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save the plot.
+    Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save the plot.<br>
+    Press <kbd>Ctrl</kbd>+<kbd>O</kbd> to open a local file.
+  </p>
+  <p>
+    <a href="https://github.com/ivankp/web-plots" target="_blank">GitHub</a>
   </p>
 </div>
 <figure id="plot"></figure>
