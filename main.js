@@ -154,12 +154,16 @@ function make_plot(data,call=0) {
             draw2d.checked = true;
             draw2d.className = 'draw2d';
             draw2d.onchange = function() {
-              if (this.checked)
+              if (this.checked) {
                 while (div.children.length > 1)
                   div.removeChild(div.lastChild);
-              make_plot(data,2);
+                make_plot_2D(data);
+              } else {
+                make_plot(data,2);
+              }
             };
           }
+          draw2d.onchange();
           return;
         }
 
@@ -460,6 +464,105 @@ function make_plot(data,call=0) {
   }
 }
 
+function make_plot_2D(data) {
+  const margin = { top: 10, right: 50, bottom: 20, left: 30, z: 25, zleft: 3 },
+        width  = 500 + margin.left + margin.right + margin.z,
+        height = 500 + margin.bottom + margin.top;
+
+  const fig = make(clear(_id('figures')),'figure');
+  if (data.title) {
+    const cap = make(fig,'figcaption');
+    data.title.split(/\^(\d+)/).forEach((x,i) => {
+      if (i%2) make(cap,'sup').textContent = x;
+      else cap.appendChild(document.createTextNode(x));
+    });
+  }
+
+  const hist = data.hists[0];
+  const axes = hist.axes.map(a => a[0]);
+  function* bin_indices() {
+    const [n1,n2] = axes.map(a => a.length-1);
+    let k = n2+2;
+    for (let i=0; i<n1; ++i) {
+      ++k;
+      for (let j=0; j<n2; ++j, ++k)
+        yield [ i, j, k ];
+      ++k;
+    }
+  }
+
+  const sx = d3.scaleLinear()
+    .domain([axes[0][0],last(axes[0])]).nice()
+    .range([margin.left, width - margin.right - margin.z]);
+  const sy = d3.scaleLinear()
+    .domain([axes[1][0],last(axes[1])]).nice()
+    .range([height - margin.bottom, margin.top]);
+  const ry = sy.range();
+  { const a = Math.round((ry[0]-ry[1])/10);
+    ry[0] -= a;
+    ry[1] += a;
+  }
+  const sz = d3.scaleLinear()
+    .domain(d3.extent(bin_indices(), ([i,j,k]) => hist.bins[k][0])).nice()
+    .range(ry);
+  // https://github.com/d3/d3-scale-chromatic
+  const sc = d3.scaleSequential(d3.interpolateTurbo) // Viridis, Turbo, RdYlGn
+    .domain(sz.domain());
+
+  const ax = d3.axisBottom(sx);
+  const ay = d3.axisLeft(sy);
+  const az = d3.axisRight(sz);
+
+  const svg = d3.select(fig).append('svg')
+    .attrs({ viewBox: [0,0,width,height], width, height });
+  // const svg_node = svg.node();
+
+  { const g = svg.append('g')
+    g.append('g').attrs({
+      transform: `translate(0,${height-margin.bottom})`
+    }).call(ax);
+    g.append('g').attrs({
+      transform: `translate(${margin.left},0)`
+    }).call(ay);
+    g.append('g').attrs({
+      transform: `translate(${width-margin.right+margin.zleft},0)`
+    }).call(az);
+    g.selectAll('line,path').attr('stroke','#000');
+    g.selectAll('text').attr('fill','#000');
+    g.selectAll('*').attr('class',null);
+  }
+
+  { // Draw color scale =============================================
+    const [b,a] = sz.range();
+    const x = width-margin.right-margin.z+margin.zleft,
+          l = margin.z;
+    svg.append('g').attr('stroke-width',1)
+      .selectAll('path').data((function*(){
+          for (let i=a; i<=b; ++i) yield i;
+        })()).join('path')
+      .attrs(y => ({
+        d: `M${x} ${y+0.5}h${l}`,
+        stroke: sc(sz.invert(y))
+      }));
+  }
+
+  svg.append('g').attr('stroke','none')
+    .selectAll('rect').data(bin_indices()).join('rect')
+    .attrs(([i,j,k]) => {
+      const x = sx(axes[0][i]),
+            y = sy(axes[1][j+1]),
+            width  = sx(axes[0][i+1]) - x,
+            height = sy(axes[1][j]) - y;
+      return {
+        x: Math.round(x+1),
+        y: Math.round(y),
+        height: Math.round(height),
+        width: Math.round(width),
+        fill: sc(hist.bins[k][0])
+      };
+    });
+}
+
 function load_plot(path) {
   _id('local_file').value = null;
   fetch(root+'data/'+path+'.json', { method: 'GET' })
@@ -578,17 +681,19 @@ function save_svg(svg) {
     ],
     { type:"image/svg+xml;charset=utf-8" }
   ));
-  dummy_a.download =
-    decodeURIComponent(window.location.search.match(/(?<=\?)[^&]+/))
-    .replaceAll('/',' ') + '.svg';
-  dummy_a.click();
+  { let name = window.location.search.match(/(?<=\?)[^&]+/)
+    if (name===null) name = 'plot';
+    else name = decodeURIComponent(name).replaceAll('/',' ');
+    dummy_a.download = name + '.svg';
+    dummy_a.click();
+  }
 }
 
 window.addEventListener('keydown', e => { // Ctrl + s
   if ( e.ctrlKey && !(e.shiftKey || e.altKey || e.metaKey))
     switch (e.which || e.keyCode) {
       case 83:
-        const svg = _id('plot').querySelector('svg');
+        const svg = _id('figures').querySelector('figure > svg');
         if (svg) {
           e.preventDefault();
           save_svg(svg);
