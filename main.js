@@ -72,7 +72,7 @@ function arreq() {
   return true;
 }
 
-function make_plot(data) {
+function make_plot(data,call1=true) {
   const { opts={} } = data;
   const { normalize=false, overlay=false } = opts;
 
@@ -83,38 +83,44 @@ function make_plot(data) {
       return mapobj(data, (key,val) => [key, (key==='hists' ? [hist] : val)]);
     });
     select.onchange = function() {
-      make_plot(single_hists[this.options.selectedIndex]);
+      make_plot(single_hists[this.options.selectedIndex],false);
     };
     select.selectedIndex = 0;
     select.onchange();
     select.focus();
     return;
-  }
+  } else if (call1) clear(_id('figure_select'));
 
   const ex = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY],
         ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
   const hists = [ ];
 
-  for (let { name, axes, bins, style={} } of data.hists) {
-    if (!(Array.isArray(axes) && axes.length))
-      throw new Error('"axes" must be a non-empty array');
+  for (const { name, axes, bins, style={} } of data.hists) {
+    if (!axes.length) throw new Error(
+      '"axes" must be a non-empty array');
     let nbins_total = 1;
-    axes = axes.map(dim => {
-      if (!(Array.isArray(dim) && dim.length))
-        throw new Error('elements of "axes" must be non-empty arrays');
+    for (const dim of axes) {
+      const dimn = dim.length;
+      if (!dimn) throw new Error(
+        'elements of "axes" must be non-empty arrays');
       let nbins_dim = 0;
-      dim = dim.map(axis => {
-        if (!Array.isArray(axis))
-          throw new Error('axis definition must be an array');
+      for (let i=0; i<dimn; ++i) {
+        const axis = dim[i];
+        if (axis.constructor === Float32Array) {
+          nbins_dim += axis.length+1;
+          continue;
+        }
+        if (axis.constructor !== Array) throw new Error(
+          'axis definition must be an array');
         let n = 0;
         for (const x of axis) {
-          if (typeof x === 'number') ++n;
+          if (x.constructor === Number) ++n;
           else n += x[2]+1;
         }
         const edges = new Float32Array(n);
         let j = 0;
         for (const x of axis) {
-          if (typeof x === 'number') edges[j++] = x;
+          if (x.constructor === Number) edges[j++] = x;
           else {
             const [ a, b, n ] = x;
             const d = (b-a)/n;
@@ -124,17 +130,92 @@ function make_plot(data) {
           }
         }
         nbins_dim += edges.length+1;
-        return edges.sort();
-      });
-      const n = dim.length;
-      nbins_total = nbins_dim + (nbins_total-n)*(dim[n-1].length+1);
-      return dim;
-    });
+        dim[i] = edges.sort();
+      }
+      nbins_total = nbins_dim + (nbins_total-dimn)*(dim[dimn-1].length+1);
+    }
     if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
-    if (axes.length!==1 || axes[0].length!==1)
-      throw new Error('multiple axes not yet implemented');
+    { const div = _id('figure_select');
+      while (div.children.length > 1) div.removeChild(div.lastChild);
+      const naxes = axes.length;
+      if (naxes > 1) {
+        const tab = make(div,'table');
+        const tr1 = make(tab,'tr');
+        const tr2 = make(tab,'tr');
+
+        const dim = [ ];
+        function select_bin() {
+          console.log(this);
+        }
+        function select_dim(d) {
+          for (let i=0; i<naxes; ++i) {
+            const [r,s] = dim[i];
+            if (i===d) {
+              clear(s).disabled = true;
+            } else if (s.options.length===0) {
+              // TODO: only works for dimensions with same binning
+              const edges = axes[i][0];
+              const n = edges.length;
+              for (let j=0; j<=n; ++j) {
+                make(s,'option').textContent =
+                  '[' + (j   ? round(edges[j-1]) : '-∞' ) +
+                  ',' + (j<n ? round(edges[j  ]) :  '∞' ) + ')';
+              }
+              s.selectedIndex = 0;
+              s.disabled = false;
+              s.onchange();
+            }
+          }
+        }
+        for (let i=0; i<naxes; ++i) {
+          const r = make(tr1,'td','input');
+          r.type = 'radio';
+          r.name = 'dim';
+          const s = make(tr2,'td','select');
+          s.classList.add('dim');
+          dim.push([r,s]);
+          r.onchange = function(e) { select_dim(i); };
+          s.onchange = select_bin;
+        }
+        { const r = last(dim)[0];
+          r.checked = true;
+          r.onchange();
+        }
+
+        // const select = make(div,'select');
+        // for (let i=0; i<axes.length; ++i)
+        //   make(select,'option').textContent = `${i+1}`;
+        // select.onchange = function() {
+        //   while (div.children.length > 2) div.removeChild(div.lastChild);
+        //
+        //   for (const dim of axes)
+        //     if (dim.length!==1) throw new Error('not implemented');
+        //   const d = this.options.selectedIndex;
+        //   const dim = axes[d];
+        //
+        //   // make_plot(
+        //   console.log(
+        //     mapobj(data, (k1,v1) => [k1, (k1==='hists' ? [
+        //       mapobj(v1[0], (k2,v2) => [k2, (
+        //           k2==='axes'
+        //         ? [ dim ]
+        //         : k2==='bins'
+        //         ? v2 /*TODO*/
+        //         : v2)])
+        //     ] : v1)]), false
+        //   );
+        // };
+        // select.selectedIndex = 0;
+        // select.onchange();
+        return;
+      }
+    }
     const axis = axes[0][0];
+
+    // if (axes.length!==1 || axes[0].length!==1)
+    //   throw new Error('multiple axes not yet implemented');
+    // const axis = axes[0][0];
 
     if (axis[0] < ex[0]) ex[0] = axis[0];
     if (last(axis) > ex[1]) ex[1] = last(axis);
