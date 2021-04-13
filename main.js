@@ -23,11 +23,14 @@ const margin = { top: 10, right: 35, bottom: 35, left: 45 },
       height = 400 + margin.bottom + margin.top;
 
 function ypadding([min,max],logy) {
-  if (logy) return [
-    Math.pow(10,1.05*Math.log10(min) - 0.05*Math.log10(max)),
-    Math.pow(10,1.05*Math.log10(max) - 0.05*Math.log10(min))
-  ];
-  else {
+  if (logy) {
+    min = Math.log10(min);
+    max = Math.log10(max);
+    return [
+      10**(1.05*min - 0.05*max),
+      10**(1.05*max - 0.05*min)
+    ];
+  } else {
     let both = false;
     if (min > 0.) {
       if (min/max < 0.25) {
@@ -136,11 +139,33 @@ function make_plot(data,call=0) {
     }
     if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
-    { const div = _id('figure_select');
+    { let div = _id('figure_select');
       while (div.children.length > call) div.removeChild(div.lastChild);
       const ndim = axes.length;
       if (ndim > 1) {
-        const tab = make(div,'table');
+        div = div.children.length < 2 ? make(div,'div') : div.children[1];
+        let draw2d = div.querySelector('.draw2d');
+        if (ndim == 2 && (draw2d===null || draw2d.checked)) {
+          if (draw2d===null) {
+            draw2d = make(div,'label','input');
+            draw2d.parentNode.appendChild(
+              document.createTextNode('draw 2D plot'));
+            draw2d.type = 'checkbox';
+            draw2d.checked = true;
+            draw2d.className = 'draw2d';
+            draw2d.onchange = function() {
+              if (this.checked)
+                while (div.children.length > 1)
+                  div.removeChild(div.lastChild);
+              make_plot(data,2);
+            };
+          }
+          return;
+        }
+
+        let tab = div.querySelector('table');
+        if (tab===null) tab = make(div,'table');
+        else clear(tab);
         const tr1 = make(tab,'tr');
         const tr2 = make(tab,'tr');
 
