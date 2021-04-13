@@ -8,7 +8,7 @@ function clear(x) {
   for (let c; c = x.firstChild; ) x.removeChild(c);
   return x;
 }
-const round = x => x.toFixed(4).replace(/\.?0*$/,'');
+const round = (x,n=4) => x.toFixed(n).replace(/\.?0*$/,'');
 const last = xs => xs[xs.length-1];
 
 function mapobj(obj,f) {
@@ -416,7 +416,7 @@ function make_plot(data,call=0) {
         if (bin < 1) bin = 1;
         else if (bin > nbins) bin = nbins;
         p[i].textContent =
-          `bin ${bin} [${axis[bin-1]},${axis[bin]}): `
+          `bin ${bin} [${round(axis[bin-1],6)},${round(axis[bin],6)}): `
           + JSON.stringify(bins[bin]);
       }
     }
