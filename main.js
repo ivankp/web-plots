@@ -72,7 +72,7 @@ function arreq() {
   return true;
 }
 
-function make_plot(data,call1=true) {
+function make_plot(data,call=0) {
   const { opts={} } = data;
   const { normalize=false, overlay=false } = opts;
 
@@ -83,13 +83,13 @@ function make_plot(data,call1=true) {
       return mapobj(data, (key,val) => [key, (key==='hists' ? [hist] : val)]);
     });
     select.onchange = function() {
-      make_plot(single_hists[this.options.selectedIndex],false);
+      make_plot(single_hists[this.options.selectedIndex],1);
     };
     select.selectedIndex = 0;
     select.onchange();
     select.focus();
     return;
-  } else if (call1) clear(_id('figure_select'));
+  } else if (call===0) clear(_id('figure_select'));
 
   const ex = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY],
         ey = [Number.POSITIVE_INFINITY,Number.NEGATIVE_INFINITY];
@@ -137,19 +137,53 @@ function make_plot(data,call1=true) {
     if (nbins_total!==bins.length) throw new Error('wrong number of bins');
 
     { const div = _id('figure_select');
-      while (div.children.length > 1) div.removeChild(div.lastChild);
-      const naxes = axes.length;
-      if (naxes > 1) {
+      while (div.children.length > call) div.removeChild(div.lastChild);
+      const ndim = axes.length;
+      if (ndim > 1) {
         const tab = make(div,'table');
         const tr1 = make(tab,'tr');
         const tr2 = make(tab,'tr');
 
-        const dim = [ ];
+        const dim = new Array(ndim);
         function select_bin() {
-          console.log(this);
+          const kk = new Int32Array(ndim);
+          const ii = new Int32Array(ndim);
+          for (let i=0; i<ndim; ++i)
+            kk[i] = dim[i][1].selectedIndex;
+          const d = kk.indexOf(-1);
+          const axis = axes[d][0]; // TODO
+          const nb1 = bins.length, nb2 = axis.length+1;
+          const bins2 = new Array(nb2);
+          for (let b1=0, b2=0; b1<nb1; ++b1) {
+            let b = true;
+            for (let i=ndim; --i >= 0; ) {
+              if (i !== d && ii[i] !== kk[i]) {
+                b = false;
+                break;
+              }
+            }
+            if (b) {
+              bins2[b2] = bins[b1];
+              if (++b2 === nb2) break;
+            }
+            for (let i=ndim; --i >= 0; ) {
+              if (++ii[i] <= axes[i][0].length) break; // TODO
+              ii[i] = 0;
+            }
+          }
+          make_plot(
+            mapobj(data, (k1,v1) => [k1, (k1==='hists' ? [
+              mapobj(v1[0], (k2,v2) => [k2, (
+                  k2==='axes'
+                ? [[ axis ]]
+                : k2==='bins'
+                ? bins2
+                : v2)])
+            ] : v1)]), 2
+          );
         }
         function select_dim(d) {
-          for (let i=0; i<naxes; ++i) {
+          for (let i=0; i<ndim; ++i) {
             const [r,s] = dim[i];
             if (i===d) {
               clear(s).disabled = true;
@@ -164,50 +198,27 @@ function make_plot(data,call1=true) {
               }
               s.selectedIndex = 0;
               s.disabled = false;
-              s.onchange();
             }
           }
+          dim[d][1].onchange();
         }
-        for (let i=0; i<naxes; ++i) {
+        for (let i=0; i<ndim; ++i) {
           const r = make(tr1,'td','input');
           r.type = 'radio';
           r.name = 'dim';
           const s = make(tr2,'td','select');
           s.classList.add('dim');
-          dim.push([r,s]);
-          r.onchange = function(e) { select_dim(i); };
+          dim[i] = [r,s];
+          if (ndim-i===1 || axes[i].length===1)
+            r.onchange = function(e) { select_dim(i); };
+          else
+            r.disabled = true;
           s.onchange = select_bin;
         }
         { const r = last(dim)[0];
           r.checked = true;
           r.onchange();
         }
-
-        // const select = make(div,'select');
-        // for (let i=0; i<axes.length; ++i)
-        //   make(select,'option').textContent = `${i+1}`;
-        // select.onchange = function() {
-        //   while (div.children.length > 2) div.removeChild(div.lastChild);
-        //
-        //   for (const dim of axes)
-        //     if (dim.length!==1) throw new Error('not implemented');
-        //   const d = this.options.selectedIndex;
-        //   const dim = axes[d];
-        //
-        //   // make_plot(
-        //   console.log(
-        //     mapobj(data, (k1,v1) => [k1, (k1==='hists' ? [
-        //       mapobj(v1[0], (k2,v2) => [k2, (
-        //           k2==='axes'
-        //         ? [ dim ]
-        //         : k2==='bins'
-        //         ? v2 /*TODO*/
-        //         : v2)])
-        //     ] : v1)]), false
-        //   );
-        // };
-        // select.selectedIndex = 0;
-        // select.onchange();
         return;
       }
     }
